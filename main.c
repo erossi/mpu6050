@@ -35,7 +35,8 @@ int main(void)
 	uart_printstr(0, "begin\n");
 
 	_delay_ms(1000);
-	err = mpu6050_init();
+
+	err = mpu6050_init(mpu6050);
 	string = utoa(err, string, 16);
 	uart_printstr(0, "\nInit: 0x");
 	uart_printstr(0, string);

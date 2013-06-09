@@ -87,41 +87,6 @@ uint8_t register_wb(const uint8_t addr, const uint8_t reg_addr,
 	return (error);
 }
 
-/** Init
- * The default id is 0b110100
- */
-uint8_t mpu6050_init(void)
-{
-	uint8_t byte, error;
-
-	i2c_init();
-
-	error = register_rb(MPU6050_ADDR, MPU6050_RA_WHO_AM_I, &byte);
-
-	if (error || (byte != 0x68)) {
-		error |= 0x80;
-	}
-
-	if (!error) {
-		/* Sample rate /8 */
-		error |= register_wb(MPU6050_ADDR,
-				MPU6050_RA_SMPLRT_DIV, 7);
-		error |= register_wb(MPU6050_ADDR, MPU6050_RA_CONFIG, 6);
-		/* Full scale */
-		error |= register_wb(MPU6050_ADDR,
-				MPU6050_RA_GYRO_CONFIG, 0x18);
-		error |= register_wb(MPU6050_ADDR,
-				MPU6050_RA_ACCEL_CONFIG, 1);
-		/* No sleep
-		 * clksrc Internal 8KHz
-		 * Temp. enable.
-		 */
-		error = register_wb(MPU6050_ADDR, MPU6050_RA_PWR_MGMT_1, 1);
-	}
-
-	return (error);
-}
-
 /** The temperature read and converter.
  *
  * From the datasheet:
@@ -139,7 +104,7 @@ uint8_t mpu6050_init(void)
  *   = (Traw + 11900 + 521) / 340
  *   = (Traw + 12421) / 340
  */
-uint8_t mpu6050_get_temperature(struct mpu6050_t *mpu6050)
+uint8_t mpu6050_read_temperature(struct mpu6050_t *mpu6050)
 {
 	uint8_t err;
 	int raw_temp;
@@ -153,7 +118,7 @@ uint8_t mpu6050_get_temperature(struct mpu6050_t *mpu6050)
 	return (err);
 }
 
-uint8_t mpu6050_read_all(struct mpu6050_t *mpu6050)
+uint8_t mpu6050_read_accel(struct mpu6050_t *mpu6050)
 {
 	uint8_t err;
 	uint16_t word;
@@ -165,15 +130,122 @@ uint8_t mpu6050_read_all(struct mpu6050_t *mpu6050)
 	mpu6050->ay = (int)word;
 	err |= register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_ZOUT_H, &word);
 	mpu6050->az = (int)word;
-	/* Read the gyro */
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_XOUT_H, &word);
-	mpu6050->gx = (int)word;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_YOUT_H, &word);
-	mpu6050->gy = (int)word;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_ZOUT_H, &word);
-	mpu6050->gz = (int)word;
 
-	err |= mpu6050_get_temperature(mpu6050);
+	return (err);
+}
+
+/** Read the gyro.
+ *
+ */
+uint8_t mpu6050_read_gyro(struct mpu6050_t *mpu6050)
+{
+	uint8_t err;
+	uint16_t word;
+
+	err = register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_XOUT_H, &word);
+	mpu6050->gx = (int)word - mpu6050->offset_gx;
+	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_YOUT_H, &word);
+	mpu6050->gy = (int)word - mpu6050->offset_gy;
+	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_ZOUT_H, &word);
+	mpu6050->gz = (int)word - mpu6050->offset_gz;
+
+	return (err);
+}
+
+/** Calibrate the gyroscope.
+ *
+ * Perform 255 readings and mediate them in order to
+ * get the offsets.
+ * This has to be done in a stable situation.
+ * The sum of readings of any of the axis has to be stored
+ * in an INT or the calibration fail!
+ *
+ * @note use the accelerometer to check the stability during
+ * the calibration?
+ * @bug Calibration drift should be small numbers.
+ */
+uint8_t mpu6050_gyro_calibrate(struct mpu6050_t *mpu6050)
+{
+	uint8_t i, err;
+	int sx, sy, sz;
+
+	err = 0;
+	sx = 0;
+	sy = 0;
+	sz = 0;
+	mpu6050->offset_gx = 0;
+	mpu6050->offset_gy = 0;
+	mpu6050->offset_gz = 0;
+
+	for (i = 0; i < MPU6050_GYRO_CALIBRATION; i++) {
+		err |= mpu6050_read_gyro(mpu6050);
+		sx += mpu6050->gx;
+		sy += mpu6050->gy;
+		sz += mpu6050->gz;
+	}
+
+	mpu6050->offset_gx = (int)(sx/MPU6050_GYRO_CALIBRATION);
+	mpu6050->offset_gy = (int)(sy/MPU6050_GYRO_CALIBRATION);
+	mpu6050->offset_gz = (int)(sz/MPU6050_GYRO_CALIBRATION);
+
+	if (!err)
+		mpu6050->flags |= _BV(MPU6050_FLAG_CALIBRATED);
+
+	return (err);
+}
+
+/** Init
+ * The default id is 0b110100
+ */
+uint8_t mpu6050_init(struct mpu6050_t *mpu6050)
+{
+	uint8_t byte, err;
+
+	mpu6050->flags = 0;
+
+	i2c_init();
+
+	err = register_rb(MPU6050_ADDR, MPU6050_RA_WHO_AM_I, &byte);
+
+	if (err || (byte != 0x68)) {
+		err |= 0x80;
+		mpu6050->flags |= _BV(MPU6050_FLAG_COM_ERR);
+	}
+
+	if (!err) {
+		/* Sample rate /8 */
+		err = register_wb(MPU6050_ADDR,
+				MPU6050_RA_SMPLRT_DIV, 7);
+		err |= register_wb(MPU6050_ADDR, MPU6050_RA_CONFIG, 6);
+		/* Full scale */
+		err |= register_wb(MPU6050_ADDR,
+				MPU6050_RA_GYRO_CONFIG, 0x18);
+		err |= register_wb(MPU6050_ADDR,
+				MPU6050_RA_ACCEL_CONFIG, 1);
+		/* No sleep
+		 * clksrc Internal 8KHz
+		 * Temp. enable.
+		 */
+		err |= register_wb(MPU6050_ADDR, MPU6050_RA_PWR_MGMT_1, 1);
+	} else {
+		mpu6050->flags |= _BV(MPU6050_FLAG_COM_ERR);
+	}
+
+	if (!err)
+		err = mpu6050_gyro_calibrate(mpu6050);
+	else
+		mpu6050->flags |= _BV(MPU6050_FLAG_COM_ERR);
+
+	return (err);
+}
+
+uint8_t mpu6050_read_all(struct mpu6050_t *mpu6050)
+{
+	uint8_t err;
+
+	err = mpu6050_read_accel(mpu6050);
+	err |= mpu6050_read_gyro(mpu6050);
+	err |= mpu6050_read_temperature(mpu6050);
 
 	return (err);
 }

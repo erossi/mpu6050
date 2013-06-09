@@ -54,6 +54,10 @@
 #define MPU6050_RA_PWR_MGMT_1 0x6B
 #define MPU6050_RA_PWR_MGMT_2 0x6C
 
+#define MPU6050_FLAG_CALIBRATED 0
+#define MPU6050_FLAG_COM_ERR 0xf
+/** Number of cycle to calibrate the gyro. */
+#define MPU6050_GYRO_CALIBRATION 0x0f
 
 struct mpu6050_t {
 	int16_t ax;
@@ -62,11 +66,14 @@ struct mpu6050_t {
 	int16_t gx;
 	int16_t gy;
 	int16_t gz;
+	int offset_gx;
+	int offset_gy;
+	int offset_gz;
 	float temp;
 	uint16_t flags;
 };
 
-uint8_t mpu6050_init(void);
+uint8_t mpu6050_init(struct mpu6050_t *mpu6050);
 uint8_t mpu6050_read_all(struct mpu6050_t *mpu6050);
 
 #endif
