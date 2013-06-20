@@ -60,11 +60,19 @@ uint8_t i2c_send(const uint8_t code, const uint8_t data)
 	return(TW_STATUS);
 }
 
-/*! Initialize the i2c bus */
+/** Initialize the i2c bus.
+ *
+ * See the datasheet for SCL speed.
+ *
+ * SCL freq = CPU FREQ / (16 + 2 * TWBR * Prescaler)
+ *
+ * @note 16Mhz Arduino, 100Khz I2C bus, Prescaler = 4, TWBR = 18
+ */
 void i2c_init(void)
 {
-	TWSR = _BV(TWPS0) | _BV(TWPS1);
-	TWBR = 0xff;
+	/* Prescaler 4 */
+	TWSR = _BV(TWPS0);
+	TWBR = 18;
 }
 
 /** Send a byte to the i2c slave.

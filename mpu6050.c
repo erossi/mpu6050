@@ -108,10 +108,10 @@ uint8_t mpu6050_read_temperature(struct mpu6050_t *mpu6050)
 {
 	uint8_t err;
 	int raw_temp;
-	uint16_t uraw = 0;
+	uint16_t uraw;
 
 	/* Read the raw temperature */
-	err = register_rw(MPU6050_ADDR, MPU6050_RA_TEMP_OUT_H, &uraw);
+	err = register_rw(MPU6050_ADDR, MPU6050_RA_TEMP_OUT, &uraw);
 	raw_temp = (int)uraw;
 	mpu6050->temp = ((float)raw_temp + 12421.0) / 340.0;
 
@@ -124,11 +124,11 @@ uint8_t mpu6050_read_accel(struct mpu6050_t *mpu6050)
 	uint16_t word;
 
 	/* Read the accel */
-	err = register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_XOUT_H, &word);
+	err = register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_XOUT, &word);
 	mpu6050->ax = (int)word;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_YOUT_H, &word);
+	err |= register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_YOUT, &word);
 	mpu6050->ay = (int)word;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_ZOUT_H, &word);
+	err |= register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_ZOUT, &word);
 	mpu6050->az = (int)word;
 
 	return (err);
@@ -142,11 +142,11 @@ uint8_t mpu6050_read_gyro(struct mpu6050_t *mpu6050)
 	uint8_t err;
 	uint16_t word;
 
-	err = register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_XOUT_H, &word);
+	err = register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_XOUT, &word);
 	mpu6050->gx = (int)word - mpu6050->offset_gx;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_YOUT_H, &word);
+	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_YOUT, &word);
 	mpu6050->gy = (int)word - mpu6050->offset_gy;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_ZOUT_H, &word);
+	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_ZOUT, &word);
 	mpu6050->gz = (int)word - mpu6050->offset_gz;
 
 	return (err);
