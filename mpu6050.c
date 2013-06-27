@@ -32,41 +32,37 @@ void swapit(uint16_t *swapme)
 
 /** Register Read (Byte).
  *
- * @param addr the address of the device.
  * @param reg_addr the register address.
  * @param byte the data to be read.
  */
-uint8_t register_rb(const uint8_t addr, const uint8_t reg_addr,
-		uint8_t *byte)
+uint8_t register_rb(const uint8_t reg_addr, uint8_t *byte)
 {
 	uint8_t error;
 
-	error = i2c_master_send_b(addr, reg_addr, FALSE);
+	error = i2c_master_send_b(MPU6050_ADDR, reg_addr, FALSE);
 
 	if (!error)
-		error = i2c_master_read_b(addr, byte, TRUE);
+		error = i2c_master_read_b(MPU6050_ADDR, byte, TRUE);
 
 	return (error);
 }
 
 /** Register Read (word).
  *
- * @param addr the address of the device.
  * @param reg_addr the register address.
  * @param byte the data to be read.
  */
-uint8_t register_rw(const uint8_t addr, const uint8_t reg_addr,
-		uint16_t *word)
+uint8_t register_rw(const uint8_t reg_addr, uint16_t *word)
 {
 	uint8_t err;
 
-	err = i2c_master_send_b(addr, reg_addr, FALSE);
+	err = i2c_master_send_b(MPU6050_ADDR, reg_addr, FALSE);
 
 	if (!err)
-		err = i2c_master_read_w(addr, word);
+		err = i2c_master_read_w(MPU6050_ADDR, word);
 
 	/*
-		err = i2c_master_read_w(addr, word, TRUE);
+		err = i2c_master_read_w(MPU6050_ADDR, word, TRUE);
 		*/
 
 	return (err);
@@ -74,16 +70,14 @@ uint8_t register_rw(const uint8_t addr, const uint8_t reg_addr,
 
 /** Register write (Byte).
  *
- * @param addr the address of the device.
  * @param reg_addr the register address.
  * @param byte the data to be written.
  */
-uint8_t register_wb(const uint8_t addr, const uint8_t reg_addr,
-		uint8_t byte)
+uint8_t register_wb(const uint8_t reg_addr, uint8_t byte)
 {
 	uint8_t error;
 
-	error = i2c_master_send_w(addr, reg_addr, byte);
+	error = i2c_master_send_w(MPU6050_ADDR, reg_addr, byte);
 	return (error);
 }
 
@@ -111,7 +105,7 @@ uint8_t mpu6050_read_temperature(struct mpu6050_t *mpu6050)
 	uint16_t uraw;
 
 	/* Read the raw temperature */
-	err = register_rw(MPU6050_ADDR, MPU6050_RA_TEMP_OUT, &uraw);
+	err = register_rw(MPU6050_RA_TEMP_OUT, &uraw);
 	raw_temp = (int)uraw;
 	mpu6050->temp = ((float)raw_temp + 12421.0) / 340.0;
 
@@ -124,11 +118,11 @@ uint8_t mpu6050_read_accel(struct mpu6050_t *mpu6050)
 	uint16_t word;
 
 	/* Read the accel */
-	err = register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_XOUT, &word);
+	err = register_rw(MPU6050_RA_ACCEL_XOUT, &word);
 	mpu6050->ax = (int)word;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_YOUT, &word);
+	err |= register_rw(MPU6050_RA_ACCEL_YOUT, &word);
 	mpu6050->ay = (int)word;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_ACCEL_ZOUT, &word);
+	err |= register_rw(MPU6050_RA_ACCEL_ZOUT, &word);
 	mpu6050->az = (int)word;
 
 	return (err);
@@ -142,11 +136,11 @@ uint8_t mpu6050_read_gyro(struct mpu6050_t *mpu6050)
 	uint8_t err;
 	uint16_t word;
 
-	err = register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_XOUT, &word);
+	err = register_rw(MPU6050_RA_GYRO_XOUT, &word);
 	mpu6050->gx = (int)word - mpu6050->offset_gx;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_YOUT, &word);
+	err |= register_rw(MPU6050_RA_GYRO_YOUT, &word);
 	mpu6050->gy = (int)word - mpu6050->offset_gy;
-	err |= register_rw(MPU6050_ADDR, MPU6050_RA_GYRO_ZOUT, &word);
+	err |= register_rw(MPU6050_RA_GYRO_ZOUT, &word);
 	mpu6050->gz = (int)word - mpu6050->offset_gz;
 
 	return (err);
@@ -205,28 +199,26 @@ uint8_t mpu6050_init(struct mpu6050_t *mpu6050)
 
 	i2c_init();
 
-	err = register_rb(MPU6050_ADDR, MPU6050_RA_WHO_AM_I, &byte);
+	err = register_rb(MPU6050_RA_WHO_AM_I, &byte);
 
 	if (err || (byte != 0x68)) {
-		err |= 0x80;
+		err |= 0x80; /* give me a name error */
 		mpu6050->flags |= _BV(MPU6050_FLAG_COM_ERR);
 	}
 
 	if (!err) {
 		/* Sample rate /8 */
-		err = register_wb(MPU6050_ADDR,
-				MPU6050_RA_SMPLRT_DIV, 7);
-		err |= register_wb(MPU6050_ADDR, MPU6050_RA_CONFIG, 6);
+		err = register_wb(MPU6050_RA_SMPLRT_DIV, 7);
+		err |= register_wb(MPU6050_RA_CONFIG, 6);
 		/* Full scale */
-		err |= register_wb(MPU6050_ADDR,
-				MPU6050_RA_GYRO_CONFIG, 0x18);
-		err |= register_wb(MPU6050_ADDR,
-				MPU6050_RA_ACCEL_CONFIG, 1);
+		err |= register_wb(MPU6050_RA_GYRO_CONFIG, 0x18);
+		/* Accel Range +-2G, HPF 1 */
+		err |= register_wb(MPU6050_RA_ACCEL_CONFIG, 1);
 		/* No sleep
 		 * clksrc Internal 8KHz
 		 * Temp. enable.
 		 */
-		err |= register_wb(MPU6050_ADDR, MPU6050_RA_PWR_MGMT_1, 1);
+		err |= register_wb(MPU6050_RA_PWR_MGMT_1, 1);
 	} else {
 		mpu6050->flags |= _BV(MPU6050_FLAG_COM_ERR);
 	}
@@ -248,4 +240,135 @@ uint8_t mpu6050_read_all(struct mpu6050_t *mpu6050)
 	err |= mpu6050_read_temperature(mpu6050);
 
 	return (err);
+}
+
+/** Configure Low Power Accel for Motion Interrupt (LPA).
+ *
+ * @bug Make sure Accel is running.
+ */
+uint8_t lpa_start(struct mpu6050_t *mpu6050)
+{
+	uint8_t err, reg;
+
+	/* Step 1
+	 * In PWR_MGMT_1 make cycle=0 and sleep=0
+	 * In PWR_MGMT_2 make STBY_[XYZ]A=0
+	 */
+	err = register_rb(MPU6050_RA_PWR_MGMT_1, &reg);
+
+	if (!err) {
+		reg &= ~_BV(MPU6050_PWR1_SLEEP_BIT | MPU6050_PWR1_CYCLE_BIT);
+		err = register_wb(MPU6050_RA_PWR_MGMT_1, reg);
+	}
+
+	err |= register_rb(MPU6050_RA_PWR_MGMT_2, &reg);
+
+	if (!err) {
+		/* STBY Accel clear */
+		reg &= ~_BV(MPU6050_PWR2_STBY_XA_BIT |
+				MPU6050_PWR2_STBY_YA_BIT |
+				MPU6050_PWR2_STBY_ZA_BIT);
+		err = register_wb(MPU6050_RA_PWR_MGMT_2, reg);
+	}
+
+	/* Step 2
+	 * Set Accel HPF to reset settings.
+	 */
+	err |= register_rb(MPU6050_RA_ACCEL_CONFIG, &reg);
+
+	if (!err) {
+		/* set Accel range +- 2G, HPF to 0b000 */
+		err = register_wb(MPU6050_RA_ACCEL_CONFIG, 0);
+	}
+
+	/* Step 3
+	 * Set Accel LPF to 256Hz BW.
+	 */
+	err |= register_rb(MPU6050_RA_CONFIG, &reg);
+
+	if (!err) {
+		/* set Accel LPF to 256Hz BW 0b000 */
+		reg &= ~_BV(2 | 1 | 0);
+		err = register_wb(MPU6050_RA_CONFIG, reg);
+	}
+
+	/* Step 4
+	 * Set motion IRQ to enable.
+	 */
+	if (!err) {
+		err = register_wb(MPU6050_RA_INT_ENABLE, 0x40);
+	}
+
+	/* Step 5
+	 * Set motion duration.
+	 */
+	if (!err) {
+		err = register_wb(MPU6050_RA_MOT_DUR, 1);
+	}
+
+	/* Step 6
+	 * Set motion threshold.
+	 */
+	if (!err) {
+		err = register_wb(MPU6050_RA_MOT_THR, 20);
+	}
+
+	/* Step 7
+	 * Add delay.
+	 */
+	_delay_ms(1);
+
+	/* Step 8
+	 * Set Accel HPF to HOLD settings.
+	 */
+	err |= register_rb(MPU6050_RA_ACCEL_CONFIG, &reg);
+
+	if (!err) {
+		/* set HPF to 0b111 */
+		reg |= 7;
+		err = register_wb(MPU6050_RA_ACCEL_CONFIG, reg);
+	}
+
+	/* Step 9
+	 * Set the frequency of wakeup.
+	 */
+	err |= register_rb(MPU6050_RA_PWR_MGMT_2, &reg);
+
+	if (!err) {
+		reg |= _BV(6 | 2 | 1 | 0);
+		reg &= ~_BV(7);
+		err = register_wb(MPU6050_RA_PWR_MGMT_2, reg);
+	}
+
+	/* Step 10
+	 * Enable cycle mode (Low Power Mode).
+	 */
+	err |= register_rb(MPU6050_RA_PWR_MGMT_1, &reg);
+
+	if (!err) {
+		reg |= _BV(5);
+		reg &= ~_BV(6);
+		err = register_wb(MPU6050_RA_PWR_MGMT_1, reg);
+	}
+
+	return (err);
+}
+
+uint8_t lpa_stop(struct mpu6050_t *mpu6050)
+{
+	return(0);
+}
+
+uint8_t mpu6050_LPA(uint8_t mode, struct mpu6050_t *mpu6050)
+{
+	switch (mode) {
+		case START:
+			lpa_start(mpu6050);
+			break;
+		case STOP:
+		default:
+			lpa_stop(mpu6050);
+	}
+
+	return (0);
 }
