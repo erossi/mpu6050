@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 /*! UART 0 baud rate */
-#define UART_BAUD_0 115200UL
+#define UART_BAUD_0 9600
 /*! UART 1 baud rate */
 #define UART_BAUD_1 9600
 /*! IO Buffers and masks */
