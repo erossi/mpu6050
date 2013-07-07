@@ -40,9 +40,10 @@
 #define MPU6050_RA_MOT_THR          0x1F
 #define MPU6050_RA_MOT_DUR          0x20
 
-#define MPU6050_RA_INT_ENABLE 0x38
-#define MPU6050_RA_DMP_INT_STATUS 0x39
-#define MPU6050_RA_INT_STATUS 0x3A
+#define MPU6050_RA_INT_PIN_CFG      0x37
+#define MPU6050_RA_INT_ENABLE       0x38
+#define MPU6050_RA_DMP_INT_STATUS   0x39
+#define MPU6050_RA_INT_STATUS       0x3A
 
 #define MPU6050_RA_ACCEL_XOUT 0x3B
 #define MPU6050_RA_ACCEL_XOUT_H 0x3B
@@ -106,5 +107,7 @@ struct mpu6050_t {
 
 uint8_t mpu6050_init(struct mpu6050_t *mpu6050);
 uint8_t mpu6050_read_all(struct mpu6050_t *mpu6050);
+uint8_t mpu6050_LPA(uint8_t mode, struct mpu6050_t *mpu6050);
+uint8_t mpu6050_read_irq(uint8_t *byte);
 
 #endif

@@ -292,6 +292,20 @@ uint8_t lpa_start(struct mpu6050_t *mpu6050)
 		err = register_wb(MPU6050_RA_CONFIG, reg);
 	}
 
+	/* Step pre-4
+	 * Set IRQ active low.
+	 * unused.
+	 */
+/*
+	err |= register_rb(MPU6050_RA_INT_PIN_CFG, &reg);
+
+	if (!err) {
+		* set INT_LEVEL (bit 7) to 1 *
+		reg |= _BV(7);
+		err = register_wb(MPU6050_RA_INT_PIN_CFG, reg);
+	}
+*/
+
 	/* Step 4
 	 * Set motion IRQ to enable.
 	 */
@@ -371,4 +385,8 @@ uint8_t mpu6050_LPA(uint8_t mode, struct mpu6050_t *mpu6050)
 	}
 
 	return (0);
+}
+
+uint8_t mpu6050_read_irq(uint8_t *byte) {
+	return(register_rb(MPU6050_RA_INT_STATUS, byte));
 }
