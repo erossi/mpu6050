@@ -46,6 +46,7 @@ DUDEUDEV = avrispmkII
 
 # Use sudo for USB avrispmkII
 DUDE = sudo avrdude -p $(MCU) -e -U flash:w:$(PRGNAME).hex
+DUDE = avrdude -p $(MCU) -e -U flash:w:$(PRGNAME).hex
 
 OBJCOPY = avr-objcopy -j .text -j .data -O ihex
 OBJDUMP = avr-objdump
@@ -71,6 +72,8 @@ debug.o:
 
 programardu:
 	$(DUDE) -c $(DUDEADEV) -P $(DUDEAPORT)
+
+arduino: programardu
 
 programstk:
 	$(DUDE) -c $(DUDESDEV) -P $(DUDESPORT)

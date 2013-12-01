@@ -90,15 +90,25 @@ void print_error(uint8_t error, char *string)
 
 void print_irq(char *string)
 {
-	uint8_t err, irq_reg;
+	uint8_t err, reg8;
 
-	err = mpu6050_read_irq(&irq_reg);
+	err = mpu6050_read_irq(&reg8);
 
 	if (err) {
 		print_error(err, string);
 	} else {
-		string = utoa(irq_reg, string, 16);
-		uart_printstr(0, "IRQ reg: 0x");
+		string = utoa(reg8, string, 16);
+		uart_printstr(0, "IRQ and motion status: 0x");
+		uart_printstr(0, string);
+	}
+
+	err = mpu6050_read_mot_detect_status(&reg8);
+
+	if (err) {
+		print_error(err, string);
+	} else {
+		string = utoa(reg8, string, 16);
+		uart_printstr(0, " 0x");
 		uart_printstr(0, string);
 		uart_printstr(0, "\n");
 	}
@@ -108,7 +118,7 @@ int main(void)
 {
 	struct mpu6050_t *mpu6050;
 	char *string;
-	uint8_t lpa, err;
+	uint8_t err;
 	int i;
 
 	string = malloc(80);
@@ -128,7 +138,6 @@ int main(void)
 	uart_printstr(0, string);
 	uart_printstr(0, "\n");
 
-	lpa = 0;
 	uart_printstr(0, "\nLPA start: ");
 	mpu6050_LPA(START, mpu6050);
 	uart_printstr(0, "\nLPA started.");
@@ -144,7 +153,6 @@ int main(void)
 			print_irq(string);
 			irq_flag = 0;
 			i++;
-			_delay_ms(1000);
 		}
 	}
 

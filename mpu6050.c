@@ -272,23 +272,22 @@ uint8_t lpa_start(struct mpu6050_t *mpu6050)
 	}
 
 	/* Step 2
-	 * Set Accel HPF to reset settings.
+	 * Set Accel DHPF to reset settings.
 	 */
 	err |= register_rb(MPU6050_RA_ACCEL_CONFIG, &reg);
 
 	if (!err) {
-		/* set Accel range +- 2G, HPF to 0b000 */
-		err = register_wb(MPU6050_RA_ACCEL_CONFIG, 0);
+		reg &= 0xF8; /* 0b11111000 */
+		err = register_wb(MPU6050_RA_ACCEL_CONFIG, reg);
 	}
 
 	/* Step 3
-	 * Set Accel LPF to 256Hz BW.
+	 * Set Accel DLPF.
 	 */
 	err |= register_rb(MPU6050_RA_CONFIG, &reg);
 
 	if (!err) {
-		/* set Accel LPF to 256Hz BW 0b000 */
-		reg &= ~_BV(2 | 1 | 0);
+		reg &= 0xF8; /* 0b11111000 */
 		err = register_wb(MPU6050_RA_CONFIG, reg);
 	}
 
@@ -296,7 +295,7 @@ uint8_t lpa_start(struct mpu6050_t *mpu6050)
 	 * Set IRQ active low.
 	 * unused.
 	 */
-/*
+#ifdef MPU6050_IRQ_LINE_LOW
 	err |= register_rb(MPU6050_RA_INT_PIN_CFG, &reg);
 
 	if (!err) {
@@ -304,7 +303,7 @@ uint8_t lpa_start(struct mpu6050_t *mpu6050)
 		reg |= _BV(7);
 		err = register_wb(MPU6050_RA_INT_PIN_CFG, reg);
 	}
-*/
+#endif
 
 	/* Step 4
 	 * Set motion IRQ to enable.
@@ -317,20 +316,31 @@ uint8_t lpa_start(struct mpu6050_t *mpu6050)
 	 * Set motion duration.
 	 */
 	if (!err) {
-		err = register_wb(MPU6050_RA_MOT_DUR, 1);
+		err = register_wb(MPU6050_RA_MOT_DUR, MPU6050_LPA_MOT_DUR);
 	}
 
 	/* Step 6
 	 * Set motion threshold.
 	 */
 	if (!err) {
-		err = register_wb(MPU6050_RA_MOT_THR, 20);
+		err = register_wb(MPU6050_RA_MOT_THR, MPU6050_LPA_MOT_THR);
 	}
 
-	/* Step 7
-	 * Add delay.
+	/* Step 6 - alien
+	 * Set Non valid detect control.
 	 */
-	_delay_ms(1);
+	/*
+	if (!err) {
+		err = register_wb(MPU6050_RA_MOT_DETECT_CTRL,
+			       MPU6050_LPA_DETECT_CTRL);
+	}
+	*/
+
+	/* Step 7
+	 * Add delay. Give at least 1ms delay for accumulating
+	 * samples.
+	 */
+	_delay_ms(4);
 
 	/* Step 8
 	 * Set Accel HPF to HOLD settings.
@@ -344,13 +354,15 @@ uint8_t lpa_start(struct mpu6050_t *mpu6050)
 	}
 
 	/* Step 9
-	 * Set the frequency of wakeup.
+	 * Set the frequency of wakeup and put the gyro in stdby.
 	 */
 	err |= register_rb(MPU6050_RA_PWR_MGMT_2, &reg);
 
 	if (!err) {
-		reg |= _BV(6 | 2 | 1 | 0);
-		reg &= ~_BV(7);
+		reg &= 0x38; /* 0b00111000 */
+		/* stdby for gyro */
+		reg |= _BV(2 | 1 | 0);
+		reg |= (MPU6050_LPA_WAKE_CTRL << 6);
 		err = register_wb(MPU6050_RA_PWR_MGMT_2, reg);
 	}
 
@@ -389,4 +401,8 @@ uint8_t mpu6050_LPA(uint8_t mode, struct mpu6050_t *mpu6050)
 
 uint8_t mpu6050_read_irq(uint8_t *byte) {
 	return(register_rb(MPU6050_RA_INT_STATUS, byte));
+}
+
+uint8_t mpu6050_read_mot_detect_status(uint8_t *byte) {
+	return(register_rb(MPU6050_RA_MOT_DETECT_STATUS, byte));
 }

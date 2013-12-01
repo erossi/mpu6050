@@ -67,6 +67,9 @@
 #define MPU6050_RA_GYRO_ZOUT_H 0x47
 #define MPU6050_RA_GYRO_ZOUT_L 0x48
 
+#define MPU6050_RA_MOT_DETECT_STATUS 0x61
+#define MPU6050_RA_MOT_DETECT_CTRL 0x69
+
 #define MPU6050_RA_PWR_MGMT_1 0x6B
 #define MPU6050_RA_PWR_MGMT_2 0x6C
 
@@ -91,6 +94,34 @@
 /** Number of cycle to calibrate the gyro. */
 #define MPU6050_GYRO_CALIBRATION 0x40
 
+/*
+ * For reference I am using the i2cdevlib MPU6050 library.
+ * MPU6050_RA_MOT_DETECT_CTRL, 0x69, = 3
+ * MPU6050_RA_INT_ENABLE, 0x38, = 1
+ * MPU6050_RA_ACCEL_CONFIG, 0x1C, = 1
+ * MPU6050_RA_MOT_THR, 0x1F, = 2
+ * MPU6050_RA_MOT_DUR, 0x22, = 1
+ */
+
+/* set Accel range +- 2G, HPF=0, bit 0-2 */
+#define MPU6050_LPA_DHPF 0
+/* set Accel LPF to 256Hz BW, bit 0-2 */
+#define MPU6050_LPA_DLPF 0
+
+/* IRQ line active low */
+/*
+ * #define MPU6050_IRQ_LINE_LOW
+ */
+
+/* Set motion duration (1msec=1LSB) */
+#define MPU6050_LPA_MOT_DUR 1
+/* Set motion threshold 2mg=1LSB default 20 */
+#define MPU6050_LPA_MOT_THR 2
+/* Set the wake up time to 5hz (bit 6, 7) default 1 */
+#define MPU6050_LPA_WAKE_CTRL 1
+/* Set the decrement on non-valid value, default unused */
+#define MPU6050_LPA_DETECT_CTRL 3
+
 struct mpu6050_t {
 	int16_t ax;
 	int16_t ay;
@@ -109,5 +140,6 @@ uint8_t mpu6050_init(struct mpu6050_t *mpu6050);
 uint8_t mpu6050_read_all(struct mpu6050_t *mpu6050);
 uint8_t mpu6050_LPA(uint8_t mode, struct mpu6050_t *mpu6050);
 uint8_t mpu6050_read_irq(uint8_t *byte);
+uint8_t mpu6050_read_mot_detect_status(uint8_t *byte);
 
 #endif
