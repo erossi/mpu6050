@@ -121,6 +121,9 @@ int main(void)
 	uint8_t err;
 	int i;
 
+	PORTC = 0;
+	DDRC |= _BV(PC3);
+
 	string = malloc(80);
 	mpu6050 = malloc(sizeof(struct mpu6050_t));
 
@@ -139,7 +142,7 @@ int main(void)
 	uart_printstr(0, "\n");
 
 	uart_printstr(0, "\nLPA start: ");
-	mpu6050_LPA(START, mpu6050);
+	mpu6050_LPA(LPA_START, mpu6050);
 	uart_printstr(0, "\nLPA started.");
 
 	sei();
@@ -153,6 +156,20 @@ int main(void)
 			print_irq(string);
 			irq_flag = 0;
 			i++;
+			/* mpu6050_LPA(LPA_SUSPEND, mpu6050); */
+			PORTC |= _BV(PC3);
+			_delay_ms(5000);
+			PORTC &= ~_BV(PC3);
+			/* mpu6050_LPA(LPA_RESTART, mpu6050); */
+		} else {
+			err = mpu6050_read_all(mpu6050);
+
+			if (err)
+				print_error(err, string);
+			else
+				print_all(mpu6050, string);
+
+			_delay_ms(1000);
 		}
 	}
 

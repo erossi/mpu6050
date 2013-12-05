@@ -121,6 +121,11 @@
 #define MPU6050_LPA_WAKE_CTRL 1
 /* Set the decrement on non-valid value, default unused */
 #define MPU6050_LPA_DETECT_CTRL 3
+/* Common start-stop definition */
+#define LPA_START 1
+#define LPA_STOP 2
+#define LPA_RESTART 3
+#define LPA_SUSPEND 4
 
 struct mpu6050_t {
 	int16_t ax;

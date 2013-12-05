@@ -380,6 +380,51 @@ uint8_t lpa_start(struct mpu6050_t *mpu6050)
 	return (err);
 }
 
+uint8_t lpa_restart(struct mpu6050_t *mpu6050)
+{
+	uint8_t err, reg;
+
+	/* Step 4
+	 * Set motion IRQ to enable.
+	 */
+	err = register_wb(MPU6050_RA_INT_ENABLE, 0x40);
+
+	/* Step 10
+	 * Enable cycle mode (Low Power Mode).
+	 */
+	err |= register_rb(MPU6050_RA_PWR_MGMT_1, &reg);
+
+	if (!err) {
+		reg |= _BV(5);
+		reg &= ~_BV(6);
+		err = register_wb(MPU6050_RA_PWR_MGMT_1, reg);
+	}
+
+	return (err);
+}
+
+uint8_t lpa_suspend(struct mpu6050_t *mpu6050)
+{
+	uint8_t err, reg;
+
+	/* Step 10
+	 * Disable cycle mode (Low Power Mode).
+	 */
+	err = register_rb(MPU6050_RA_PWR_MGMT_1, &reg);
+
+	if (!err) {
+		reg &= 0x9F; /* 0b10011111 */
+		err = register_wb(MPU6050_RA_PWR_MGMT_1, reg);
+	}
+
+	 /* Disable motion IRQ */
+	if (!err) {
+		err = register_wb(MPU6050_RA_INT_ENABLE, 0);
+	}
+
+	return(err);
+}
+
 uint8_t lpa_stop(struct mpu6050_t *mpu6050)
 {
 	return(0);
@@ -388,10 +433,16 @@ uint8_t lpa_stop(struct mpu6050_t *mpu6050)
 uint8_t mpu6050_LPA(uint8_t mode, struct mpu6050_t *mpu6050)
 {
 	switch (mode) {
-		case START:
+		case LPA_START:
 			lpa_start(mpu6050);
 			break;
-		case STOP:
+		case LPA_RESTART:
+			lpa_restart(mpu6050);
+			break;
+		case LPA_SUSPEND:
+			lpa_suspend(mpu6050);
+			break;
+		case LPA_STOP:
 		default:
 			lpa_stop(mpu6050);
 	}
